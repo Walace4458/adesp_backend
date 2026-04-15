@@ -1,57 +1,47 @@
 const jwt = require('jsonwebtoken');
 
-const SECRET = 'segredo_super_secreto';
+const SECRET = process.env.JWT_SECRET;
 
 module.exports = function (req, res, next) {
-    const authHeader = req.headers['authorization'];
+  const authHeader = req.headers.authorization;
 
-    console.log('🔍 AUTH HEADER:', authHeader);
+  // ❌ sem token
+  if (!authHeader) {
+    return res.status(401).json({
+      error: 'Token não fornecido'
+    });
+  }
 
-    // ❌ sem token
-    if (!authHeader) {
-        return res.status(401).json({
-            error: 'Token não fornecido'
-        });
-    }
+  // 🔥 formato: Bearer token
+  const parts = authHeader.split(' ');
 
-    // 🔥 separa Bearer + token
-    const parts = authHeader.split(' ');
+  if (parts.length !== 2) {
+    return res.status(401).json({
+      error: 'Token mal formatado'
+    });
+  }
 
-    if (parts.length !== 2) {
-        console.log('❌ FORMATO INVÁLIDO:', parts);
-        return res.status(401).json({
-            error: 'Token mal formatado'
-        });
-    }
+  const [scheme, token] = parts;
 
-    const [scheme, token] = parts;
+  if (!/^Bearer$/i.test(scheme)) {
+    return res.status(401).json({
+      error: 'Token mal formatado'
+    });
+  }
 
-    // ❌ não é Bearer
-    if (!/^Bearer$/i.test(scheme)) {
-        console.log('❌ SCHEME INVÁLIDO:', scheme);
-        return res.status(401).json({
-            error: 'Token mal formatado'
-        });
-    }
+  try {
+    // 🔐 valida token
+    const decoded = jwt.verify(token, SECRET);
 
-    console.log('🔑 TOKEN RECEBIDO:', token);
+    // 🔥 injeta dados do usuário
+    req.userId = decoded.id;
+    req.userEmail = decoded.email;
 
-    try {
-        // 🔥 tenta validar
-        const decoded = jwt.verify(token, SECRET);
+    return next();
 
-        console.log('✅ TOKEN DECODIFICADO:', decoded);
-
-        req.userId = decoded.id;
-
-        return next();
-
-    } catch (error) {
-        console.log('🚨 ERRO JWT:', error.message);
-
-        return res.status(401).json({
-            error: 'Token inválido',
-            detalhe: error.message // 🔥 isso ajuda MUITO
-        });
-    }
+  } catch (error) {
+    return res.status(401).json({
+      error: 'Token inválido'
+    });
+  }
 };

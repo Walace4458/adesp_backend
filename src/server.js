@@ -9,31 +9,54 @@ const agendaRoutes = require('./routes/agendaRoutes');
 const app = express();
 
 // =========================
-// CONFIGS
+// 🔧 CONFIGS
 // =========================
-app.use(cors());
+app.use(cors({
+  origin: '*', // 🔥 libera acesso mobile (depois pode restringir)
+}));
+
 app.use(express.json());
 
 // =========================
-// ROTAS
+// 📌 ROTAS
 // =========================
 app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/agenda', agendaRoutes);
 
 // =========================
-// TESTE
+// 🧪 TESTE
 // =========================
 app.get('/', (req, res) => {
-  res.send('API rodando');
+  res.send('API rodando 🚀');
 });
 
 // =========================
-// SERVER (🔥 CORRIGIDO)
+// ❌ ROTA NÃO ENCONTRADA
 // =========================
-const PORT = 3000;
+app.use((req, res) => {
+  return res.status(404).json({
+    error: 'Rota não encontrada'
+  });
+});
 
-// 🔥 ESSA LINHA É A DIFERENÇA
+// =========================
+// 🚨 ERRO GLOBAL
+// =========================
+app.use((err, req, res, next) => {
+  console.error('🔥 ERRO GLOBAL:', err);
+
+  return res.status(500).json({
+    error: 'Erro interno no servidor',
+    detail: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// =========================
+// 🚀 SERVER
+// =========================
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor rodando em: http://0.0.0.0:${PORT}`);
 });
