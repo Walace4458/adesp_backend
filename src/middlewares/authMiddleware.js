@@ -1,26 +1,57 @@
 const jwt = require('jsonwebtoken');
 
-module.exports = function (req, res, next) {
-    const token = req.headers['authorization'];
+const SECRET = 'segredo_super_secreto';
 
-    if (!token) {
+module.exports = function (req, res, next) {
+    const authHeader = req.headers['authorization'];
+
+    console.log('🔍 AUTH HEADER:', authHeader);
+
+    // ❌ sem token
+    if (!authHeader) {
         return res.status(401).json({
             error: 'Token não fornecido'
         });
     }
 
-    try {
-        // 🔐 verifica e decodifica o token
-        const decoded = jwt.verify(token, 'segredo_super_secreto');
+    // 🔥 separa Bearer + token
+    const parts = authHeader.split(' ');
 
-        // 🧠 salva o id do usuário na requisição
+    if (parts.length !== 2) {
+        console.log('❌ FORMATO INVÁLIDO:', parts);
+        return res.status(401).json({
+            error: 'Token mal formatado'
+        });
+    }
+
+    const [scheme, token] = parts;
+
+    // ❌ não é Bearer
+    if (!/^Bearer$/i.test(scheme)) {
+        console.log('❌ SCHEME INVÁLIDO:', scheme);
+        return res.status(401).json({
+            error: 'Token mal formatado'
+        });
+    }
+
+    console.log('🔑 TOKEN RECEBIDO:', token);
+
+    try {
+        // 🔥 tenta validar
+        const decoded = jwt.verify(token, SECRET);
+
+        console.log('✅ TOKEN DECODIFICADO:', decoded);
+
         req.userId = decoded.id;
 
-        next();
+        return next();
 
     } catch (error) {
+        console.log('🚨 ERRO JWT:', error.message);
+
         return res.status(401).json({
-            error: 'Token inválido'
+            error: 'Token inválido',
+            detalhe: error.message // 🔥 isso ajuda MUITO
         });
     }
 };

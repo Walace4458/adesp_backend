@@ -8,20 +8,32 @@ const agendaRoutes = require('./routes/agendaRoutes');
 
 const app = express();
 
+// =========================
+// CONFIGS
+// =========================
 app.use(cors());
 app.use(express.json());
 
-//rotas
-app.use(userRoutes);
-app.use(authRoutes);
-app.use(agendaRoutes);
+// =========================
+// ROTAS
+// =========================
+app.use('/users', userRoutes);
+app.use('/auth', authRoutes);
+app.use('/agenda', agendaRoutes);
 
-app.get('/', (req, res) =>{
-    res.send('API rodando');
+// =========================
+// TESTE
+// =========================
+app.get('/', (req, res) => {
+  res.send('API rodando');
 });
 
+// =========================
+// SERVER (🔥 CORRIGIDO)
+// =========================
 const PORT = 3000;
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+// 🔥 ESSA LINHA É A DIFERENÇA
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor rodando em: http://0.0.0.0:${PORT}`);
 });

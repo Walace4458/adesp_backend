@@ -5,7 +5,7 @@ const userController = require('../controllers/userController');
 
 //rotas
 
-router.get('/users', userController.getUsers);
-router.post('/users', userController.createUser);
+router.get('/', userController.getUsers);
+router.post('/', userController.createUser);
 
 module.exports = router

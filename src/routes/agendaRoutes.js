@@ -4,8 +4,25 @@ const router = express.Router();
 const agendaController = require('../controllers/agendaController');
 const verificarToken = require('../middlewares/authMiddleware');
 
-// rotas
-router.get('/agenda', agendaController.getAgenda);
-router.post('/agenda', verificarToken, agendaController.createAgenda);
+//====================
+//Eventos
+//====================
+
+// GET agenda
+router.get('/', verificarToken, agendaController.getAgenda);
+
+// POST agenda
+router.post('/', verificarToken, agendaController.createAgenda);
+
+
+
+//=================
+//Interesse
+//================
+
+router.post('/:id/interesse', verificarToken, agendaController.setInteresse);
+
+// Presença
+router.post('/:id/presenca', verificarToken, agendaController.setPresenca);
 
 module.exports = router;
