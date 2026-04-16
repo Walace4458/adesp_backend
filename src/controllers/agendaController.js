@@ -1,21 +1,28 @@
 const db = require('../database/db');
 
 // =========================
-// GET AGENDA (COM LOGS)
+// GET AGENDA
 // =========================
 exports.getAgenda = async (req, res) => {
   try {
     console.log('🔥 GET /agenda chamado');
 
     const eventos = await db.query(`
-      SELECT * FROM agenda
-      WHERE data >= NOW()
-      OR (visivel_desde IS NOT NULL AND visivel_desde <= NOW())
-    `);
+      SELECT
+      a.*,
+      ai.interessado,
+      ai.confirmado
+      FROM agenda a
+      LEFT JOIN agenda_interacoes ai
+        ON ai.event_id = CAST(a.id AS TEXT)
+        AND ai.user_id = $1
+      WHERE
+        a.data >= NOW()
+        OR (a.visivel_desde IS NOT NULL AND a.visivel_desde <=NOW())
+    `, [req.userId || null]);
 
     console.log('📦 eventos do banco:', eventos.rows.length);
 
-    // 🔥 tenta buscar recorrentes (se existir tabela)
     let eventosRecorrentes = [];
 
     try {
@@ -75,10 +82,10 @@ exports.getAgenda = async (req, res) => {
 
       eventosRecorrentes = gerarRecorrentes(recorrentes.rows);
 
-      console.log('📅 eventos recorrentes gerados:', eventosRecorrentes.length);
+      console.log('📅 recorrentes gerados:', eventosRecorrentes.length);
 
     } catch (err) {
-      console.log('⚠️ tabela eventos_recorrentes não encontrada ou erro:', err.message);
+      console.log('⚠️ erro recorrentes:', err.message);
     }
 
     const todos = [
@@ -88,12 +95,12 @@ exports.getAgenda = async (req, res) => {
 
     todos.sort((a, b) => new Date(a.data) - new Date(b.data));
 
-    console.log('✅ total eventos enviados:', todos.length);
+    console.log('✅ total enviados:', todos.length);
 
     return res.json(todos);
 
   } catch (error) {
-    console.error('🔥 ERRO REAL GET AGENDA:', error);
+    console.error('🔥 ERRO GET AGENDA:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -132,6 +139,51 @@ exports.createAgenda = async (req, res) => {
 };
 
 // =========================
+// GET INTERAÇÕES DO USUÁRIO
+// =========================
+exports.getInteracoes = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const result = await db.query(
+      `
+      SELECT event_id, interessado, confirmado
+      FROM agenda_interacoes
+      WHERE user_id = $1
+      `,
+      [userId]
+    );
+
+    const interessados = [];
+    const confirmados = [];
+
+    result.rows.forEach(row => {
+      if (row.interessado) {
+        interessados.push(row.event_id.toString());
+      }
+
+      if (row.confirmado) {
+        confirmados.push(row.event_id.toString());
+      }
+    });
+
+    console.log(`📊 user ${userId}:`, {
+      interessados: interessados.length,
+      confirmados: confirmados.length
+    });
+
+    return res.json({
+      interessados,
+      confirmados
+    });
+
+  } catch (error) {
+    console.error('🔥 ERRO GET INTERAÇÕES:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// =========================
 // INTERESSE
 // =========================
 exports.setInteresse = async (req, res) => {
@@ -140,6 +192,9 @@ exports.setInteresse = async (req, res) => {
     const eventId = req.params.id;
     const { interessado } = req.body;
 
+    if (eventId.startsWith('rec_')) {
+      return res.json({ message: 'Eventos recorrentes não salvam interação ainda' });
+    }
     await db.query(
       `
       INSERT INTO agenda_interacoes (user_id, event_id, interessado)
@@ -150,9 +205,9 @@ exports.setInteresse = async (req, res) => {
       [userId, eventId, interessado]
     );
 
-    console.log(`❤️ interesse atualizado: user ${userId} -> evento ${eventId}`);
+    console.log(`❤️ interesse: user ${userId} -> evento ${eventId}`);
 
-    return res.status(200).json({ message: 'Interesse atualizado' });
+    return res.json({ message: 'Interesse atualizado' });
 
   } catch (err) {
     console.error('🔥 ERRO INTERESSE:', err);
@@ -169,6 +224,10 @@ exports.setPresenca = async (req, res) => {
     const eventId = req.params.id;
     const { confirmado } = req.body;
 
+    if (!eventId) {
+      return res.status(400).json({ error: 'eventId não informado' });
+    }
+
     await db.query(
       `
       INSERT INTO agenda_interacoes (user_id, event_id, confirmado)
@@ -181,7 +240,7 @@ exports.setPresenca = async (req, res) => {
 
     console.log(`✅ presença: user ${userId} -> evento ${eventId}`);
 
-    return res.status(200).json({ message: 'Presença atualizada' });
+    return res.json({ message: 'Presença atualizada' });
 
   } catch (err) {
     console.error('🔥 ERRO PRESENÇA:', err);

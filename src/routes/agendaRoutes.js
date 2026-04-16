@@ -23,10 +23,14 @@ router.post('/', agendaController.createAgenda);
 // ❤️ INTERAÇÕES
 // =========================
 
-// Interesse
+// 🔥 BUSCAR interações do usuário
+router.get('/interacoes', agendaController.getInteracoes);
+router.get('/:id/presenca', agendaController.setPresenca);
+
+// 🔥 INTERESSE
 router.post('/:id/interesse', agendaController.setInteresse);
 
-// Presença
+// 🔥 PRESENÇA
 router.post('/:id/presenca', agendaController.setPresenca);
 
 module.exports = router;
